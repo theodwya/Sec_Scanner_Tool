@@ -10,16 +10,19 @@ ENV PATH="/app/venv/bin:$PATH" \
 # Create app directory
 WORKDIR /app
 
-# Install necessary system dependencies
+# Install necessary system dependencies, including OpenSSL and libmagic
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     gcc \
+    build-essential \
     libmagic1 \
     libmagic-dev \
     yara \
     clamav \
     clamav-daemon \
-    docker.io && \
+    docker.io \
+    libssl-dev \
+    openssl && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     freshclam
@@ -59,6 +62,11 @@ ENV PATH="/app/venv/bin:$PATH" \
 RUN mkdir -p /app/output /app/uploads /app/output/scan-results && \
     chown -R root:root /app
 
+# Install libmagic runtime dependency in the production stage
+RUN apt-get update && apt-get install -y --no-install-recommends libmagic1 && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 # Copy files from builder
 COPY --from=builder /app /app
 COPY --from=builder /usr/local/bin/trivy /usr/local/bin/trivy
@@ -73,3 +81,4 @@ EXPOSE 8000
 
 # Run FastAPI application using uvicorn
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+
