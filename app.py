@@ -1,5 +1,4 @@
 import os
-import json
 import subprocess
 import logging
 import magic
@@ -10,6 +9,7 @@ from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from starlette.requests import Request
+from starlette.staticfiles import StaticFiles
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -17,12 +17,23 @@ logger = logging.getLogger(__name__)
 
 # Configurations
 UPLOAD_FOLDER = '/app/uploads'
-SCAN_RESULTS_FOLDER = '/app/output/scan-results'
+SCAN_RESULTS_FOLDER = '/app/scan-results'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(SCAN_RESULTS_FOLDER, exist_ok=True)
 
+# Create FastAPI instance
 app = FastAPI()
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Setup Jinja2 templates
 templates = Jinja2Templates(directory="templates")
+
+# Route to render the main HTML page
+@app.get("/", response_class=HTMLResponse)
+async def get_index(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
 # Initialize file type detector
 try:
@@ -99,13 +110,53 @@ def run_trivy_fs_scan(target_path):
         logger.error(f"Exception during Trivy scan: {e}")
         return {'error': f"Exception during Trivy scan: {e}"}
 
+def run_trivy_image_scan(image_name):
+    """Run Trivy image scan."""
+    scan_output_path = os.path.join(SCAN_RESULTS_FOLDER, 'trivy_image_scan.log')
+    logger.info(f"Running Trivy image scan on: {image_name}")
+    command = ['trivy', 'image', image_name, '--format', 'table']
+
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, check=True)
+        if result.returncode == 0:
+            with open(scan_output_path, 'w') as f:
+                f.write(result.stdout)
+            logger.info("Trivy image scan completed successfully.")
+            return {'path': image_name, 'scan_type': 'Trivy Image', 'severity': 'info', 'details': result.stdout}
+        else:
+            logger.error(f"Trivy image scan failed: {result.stderr}")
+            return {'error': f"Trivy image scan failed: {result.stderr}"}
+    except Exception as e:
+        logger.error(f"Exception during Trivy image scan: {e}")
+        return {'error': f"Exception during Trivy image scan: {e}"}
+
+def run_trivy_repo_scan(repo_url):
+    """Run Trivy repo scan."""
+    scan_output_path = os.path.join(SCAN_RESULTS_FOLDER, 'trivy_repo_scan.log')
+    logger.info(f"Running Trivy repo scan on: {repo_url}")
+    command = ['trivy', 'repo', repo_url, '--format', 'table']
+
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, check=True)
+        if result.returncode == 0:
+            with open(scan_output_path, 'w') as f:
+                f.write(result.stdout)
+            logger.info("Trivy repo scan completed successfully.")
+            return {'path': repo_url, 'scan_type': 'Trivy Repo', 'severity': 'info', 'details': result.stdout}
+        else:
+            logger.error(f"Trivy repo scan failed: {result.stderr}")
+            return {'error': f"Trivy repo scan failed: {result.stderr}"}
+    except Exception as e:
+        logger.error(f"Exception during Trivy repo scan: {e}")
+        return {'error': f"Exception during Trivy repo scan: {e}"}
+
 @app.post("/scan/")
 async def scan_file(scan_type: str = Form(...), file: UploadFile = File(None), image_name: str = Form(None), repo_url: str = Form(None)):
     scan_results = []
 
     if scan_type == 'filesystem':
         if file:
-            filename = secure_filename(file.filename)
+            filename = file.filename
             if not filename:
                 logger.error("No filename provided for file upload.")
                 return {"error": "No valid filename provided."}
@@ -138,6 +189,7 @@ async def scan_file(scan_type: str = Form(...), file: UploadFile = File(None), i
 
     return scan_results
 
-@app.get("/", response_class=HTMLResponse)
-async def get_index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+if __name__ == "__main__":
+    import uvicorn
+    logger.info("Starting FastAPI application on http://0.0.0.0:8000")
+    uvicorn.run(app, host="0.0.0.0", port=8000)
