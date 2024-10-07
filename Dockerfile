@@ -45,7 +45,7 @@ RUN python3 -m venv /app/venv && \
 RUN mkdir -p /app/uploads /app/output/scan-results && \
     chown -R root:root /app
 
-# Copy application code
+# Copy application code to the builder stage
 COPY . /app
 
 # Stage 2: Production stage using a lightweight image for running the application
