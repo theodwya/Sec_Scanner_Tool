@@ -5,6 +5,7 @@ import magic
 import tarfile
 import shutil
 import zipfile
+import clamd
 from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -150,6 +151,18 @@ def run_trivy_repo_scan(repo_url):
         logger.error(f"Exception during Trivy repo scan: {e}")
         return {'error': f"Exception during Trivy repo scan: {e}"}
 
+def run_clamav_fs_scan(file_path):
+    """Run ClamAV scan on the file using clamd."""
+    logger.info(f"Running ClamAV FS scan on: {file_path}")
+    try:
+        cd = clamd.ClamdUnixSocket()  # Or ClamdNetworkSocket() depending on configuration
+        scan_result = cd.scan(file_path)
+        logger.info(f"ClamAV scan completed: {scan_result}")
+        return {'path': file_path, 'scan_type': 'ClamAV FS', 'severity': 'info', 'details': scan_result}
+    except Exception as e:
+        logger.error(f"Exception during ClamAV FS scan: {e}")
+        return {'error': f"Exception during ClamAV FS scan: {e}"}
+
 @app.post("/scan/")
 async def scan_file(scan_type: str = Form(...), file: UploadFile = File(None), image_name: str = Form(None), repo_url: str = Form(None)):
     scan_results = []
@@ -172,6 +185,7 @@ async def scan_file(scan_type: str = Form(...), file: UploadFile = File(None), i
             if file_type in ['application/gzip', 'application/x-tar', 'application/zip']:
                 if extract_files(file_path, extract_path):
                     scan_results.append(run_trivy_fs_scan(extract_path))
+                    scan_results.append(run_clamav_fs_scan(extract_path))  # Adding ClamAV scan
                     zip_file_path = os.path.join(UPLOAD_FOLDER, f"{filename}_scanned.zip")
                     zip_directory(extract_path, zip_file_path)
                     scan_results.append({"path": zip_file_path, "scan_type": "Zip", "severity": "info", "details": "Files re-zipped after scanning."})
@@ -180,17 +194,21 @@ async def scan_file(scan_type: str = Form(...), file: UploadFile = File(None), i
                     return {"error": f"Failed to extract {filename}"}
             else:
                 scan_results.append(run_trivy_fs_scan(file_path))
+                scan_results.append(run_clamav_fs_scan(file_path))  # Adding ClamAV scan for single files
 
     elif scan_type == 'image' and image_name:
         scan_results.append(run_trivy_image_scan(image_name))
 
-    elif scan_type == 'git' and repo_url:
+    elif scan_type == 'repo' and repo_url:
         scan_results.append(run_trivy_repo_scan(repo_url))
 
-    return scan_results
+    else:
+        return {"error": "Invalid scan type or missing parameters."}
 
+    return {"scan_results": scan_results}
+
+# Entry point for running the application
 if __name__ == "__main__":
     import uvicorn
     logger.info("Starting FastAPI application on http://0.0.0.0:8000")
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
