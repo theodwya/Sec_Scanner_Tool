@@ -22,25 +22,16 @@
             background-color: #1e1e1e;
             color: #f5f5f5;
         }
-        .navbar {
-            background-color: #333;
-            color: #fff;
-        }
-        .card {
-            background-color: #2c2c2c;
-            border-color: #ff7518;
-            color: #fff;
-        }
-        .form-control, .form-select {
+        .card, .form-control, .form-select {
             background-color: #333;
             color: #fff;
             border: 1px solid #ff7518;
         }
-        .btn-primary {
+        .btn-primary, .btn-link {
             background-color: #ff7518;
             border-color: #ff7518;
         }
-        .btn-primary:hover {
+        .btn-primary:hover, .btn-link:hover {
             background-color: #cc5e12;
             border-color: #cc5e12;
         }
@@ -70,13 +61,6 @@
         .scan-results-table {
             margin-top: 20px;
         }
-        .btn-link {
-            color: #ff7518;
-            cursor: pointer;
-        }
-        .btn-link:hover {
-            text-decoration: underline;
-        }
         .table-danger {
             background-color: #f8d7da;
         }
@@ -85,10 +69,6 @@
         }
         .table-success {
             background-color: #d4edda;
-        }
-        .theme-toggle {
-            width: 150px;
-            margin: auto;
         }
         .card-header {
             font-weight: bold;
@@ -109,8 +89,8 @@
     <div class="card shadow">
         <div class="card-header bg-primary text-white">🔍 Scanner Options</div>
         <div class="card-body">
-            <form method="POST" action="/scan/" enctype="multipart/form-data">
-                <div class="mb-3" data-bs-toggle="tooltip" data-bs-placement="right" title="Choose the type of scan you want to perform.">
+            <form id="scanForm" method="POST" action="/scan/" enctype="multipart/form-data">
+                <div class="mb-3">
                     <label for="scan_type" class="form-label">Select Scan Type:</label>
                     <select class="form-select" id="scan_type" name="scan_type">
                         <option value="filesystem">File System Scan</option>
@@ -127,7 +107,7 @@
 
                 <!-- Image Scan options -->
                 <div id="image-options" class="mb-3" style="display:none;">
-                    <label for="image_name" class="form-label">Enter Container Image Name (for Image Scan):</label>
+                    <label for="image_name" class="form-label">Enter Container Image Name:</label>
                     <input type="text" class="form-control" id="image_name" name="image_name" placeholder="example/image:tag">
                 </div>
 
@@ -138,6 +118,7 @@
                 </div>
 
                 <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search"></i> Start Scan 🎃</button>
+                <button type="button" class="btn btn-link mt-3 w-100" id="resetScan">Reset Scan 🔄</button>
             </form>
         </div>
 
@@ -175,8 +156,6 @@
 
 <!-- JavaScript and Bootstrap Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-<!-- Corrected path to static JavaScript file -->
 <script src="{{ url_for('static', path='script.js') }}"></script>
 
 <script>
@@ -187,7 +166,16 @@
         document.getElementById('image-options').style.display = (scanType === 'image') ? 'block' : 'none';
         document.getElementById('git-options').style.display = (scanType === 'git') ? 'block' : 'none';
     });
+
+    // Reset form for a new scan
+    document.getElementById('resetScan').addEventListener('click', function() {
+        document.getElementById('scanForm').reset();
+        document.getElementById('filesystem-options').style.display = 'block'; // Default option visibility
+        document.getElementById('image-options').style.display = 'none';
+        document.getElementById('git-options').style.display = 'none';
+    });
 </script>
 </body>
 </html>
+
 
