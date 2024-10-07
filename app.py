@@ -1,5 +1,4 @@
 import os
-import subprocess
 import logging
 import magic
 import tarfile
@@ -182,8 +181,9 @@ async def run_clamav_fs_scan(file_path):
         logger.error(f"Exception during ClamAV FS scan: {e}")
         return {'error': f"Exception during ClamAV FS scan: {e}"}
 
+# Update the scan route to render `scan.html`
 @app.post("/scan/")
-async def scan_file(scan_type: str = Form(...), file: UploadFile = File(None), image_name: str = Form(None), repo_url: str = Form(None)):
+async def scan_file(request: Request, scan_type: str = Form(...), file: UploadFile = File(None), image_name: str = Form(None), repo_url: str = Form(None)):
     scan_results = []
 
     # Log the incoming scan type and parameters
@@ -234,10 +234,12 @@ async def scan_file(scan_type: str = Form(...), file: UploadFile = File(None), i
     else:
         return {"error": "Invalid scan type or missing parameters."}
 
-    return {"scan_results": scan_results}
+    # Render the scan.html template and pass the scan results
+    return templates.TemplateResponse("scan.html", {"request": request, "scan_results": scan_results})
 
 # Entry point for running the application
 if __name__ == "__main__":
     import uvicorn
     logger.info("Starting FastAPI application on http://0.0.0.0:8000")
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
