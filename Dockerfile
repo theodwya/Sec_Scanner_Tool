@@ -10,11 +10,12 @@ ENV PATH="/app/venv/bin:$PATH" \
 # Create app directory
 WORKDIR /app
 
-# Install necessary system dependencies, including OpenSSL, libmagic, and security tools
+# Install necessary system dependencies, including Git, OpenSSL, libmagic, and security tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     gcc \
     build-essential \
+    git \
     libmagic1 \
     libmagic-dev \
     yara \
@@ -31,9 +32,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin && \
     curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
 
-# Install YARA rules
+# Clone YARA rules repository
 RUN mkdir -p /opt/yara && \
-    curl -o /opt/yara/malware_index.yar https://raw.githubusercontent.com/Yara-Rules/rules/master/malware/malware_index.yar
+    git clone https://github.com/Yara-Rules/rules.git /opt/yara
 
 # Create a virtual environment and install Python dependencies
 COPY requirements.txt .
@@ -56,14 +57,15 @@ ENV PATH="/app/venv/bin:$PATH" \
     UPLOAD_FOLDER=/app/uploads \
     SCAN_RESULTS_FOLDER=/app/output/scan-results \
     PYTHONUNBUFFERED=1 \
-    YARA_RULES_PATH="/opt/yara/malware_index.yar"
+    YARA_RULES_PATH="/opt/yara"
 
 # Create necessary directories and set permissions
 RUN mkdir -p /app/output /app/uploads /app/output/scan-results && \
     chown -R root:root /app
 
-# Install runtime dependencies, including ClamAV, in the production stage
+# Install runtime dependencies, including Git, ClamAV, and libmagic in the production stage
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
     libmagic1 \
     clamav \
     clamav-daemon && \
