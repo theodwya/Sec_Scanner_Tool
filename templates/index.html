@@ -95,7 +95,7 @@
                     <select class="form-select" id="scan_type" name="scan_type">
                         <option value="filesystem">File System Scan</option>
                         <option value="image">Image Scan</option>
-                        <option value="git">Git Repository Scan</option>
+                        <option value="repo">Git Repository Scan</option> <!-- Changed "git" to "repo" to match backend logic -->
                     </select>
                 </div>
 
@@ -114,7 +114,7 @@
                 <!-- Git Scan options -->
                 <div id="git-options" class="mb-3" style="display:none;">
                     <label for="git_repo_url" class="form-label">Enter Git Repository URL:</label>
-                    <input type="url" class="form-control" id="git_repo_url" name="git_repo_url" placeholder="https://github.com/user/repo.git">
+                    <input type="url" class="form-control" id="git_repo_url" name="repo_url" placeholder="https://github.com/user/repo.git"> <!-- Changed "git_repo_url" to "repo_url" to match backend logic -->
                 </div>
 
                 <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search"></i> Start Scan 🎃</button>
@@ -164,7 +164,7 @@
         const scanType = this.value;
         document.getElementById('filesystem-options').style.display = (scanType === 'filesystem') ? 'block' : 'none';
         document.getElementById('image-options').style.display = (scanType === 'image') ? 'block' : 'none';
-        document.getElementById('git-options').style.display = (scanType === 'git') ? 'block' : 'none';
+        document.getElementById('git-options').style.display = (scanType === 'repo') ? 'block' : 'none';
     });
 
     // Reset form for a new scan
